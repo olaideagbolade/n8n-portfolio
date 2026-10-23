@@ -1,0 +1,363 @@
+{
+  "name": "P1-Morning Briefing",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        64
+      ],
+      "id": "618476f1-08fa-45b9-be15-ad4795c9b41a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=7.25&longitude=5.20&current=temperature_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Africa/Lagos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        16
+      ],
+      "id": "983b9922-e4c2-4e07-b9de-77033547b345",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e9f6056c-adee-476d-a06e-25c4dd86751d",
+              "name": "weather",
+              "value": "=Akure now {{ $json.current.temperature_2m }}℃ high, {{ $json.daily.temperature_2m_max[0] }}℃, rain chance {{ $json.daily.precipitation_probability_max[0] }}%",
+              "type": "string"
+            },
+            {
+              "id": "07917910-fd01-462b-b9f9-a7433d894972",
+              "name": "date",
+              "value": "={{ $json.daily.time[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "125c500b-f4a6-473b-8834-a99538e598cd",
+              "name": "today",
+              "value": "={{ $now.toFormat('cccc, d LLLL') }}",
+              "type": "string"
+            },
+            {
+              "id": "5ea05514-ee4b-46b4-a34d-b766432b5945",
+              "name": "temp_rounded",
+              "value": "={{ Math.round($json.current.temperature_2m) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        432,
+        16
+      ],
+      "id": "204fb44b-4fe8-436c-bc71-5203f7f0abb7",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.bbci.co.uk/news/world/africa/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        -176
+      ],
+      "id": "317c800a-8184-4842-9f1a-5e1c103d6473",
+      "name": "RSS Read",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -176
+      ],
+      "id": "177439f1-530e-4cfb-9f83-87e70aab92fd",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "title",
+              "renameField": true,
+              "outputFieldName": "headlines"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -176
+      ],
+      "id": "3c01eeff-55ed-47dd-9e64-46cce6594b56",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        -80
+      ],
+      "id": "d4a75647-ea0c-406a-a9ff-506da6e12b5b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are writing a short morning briefing email for Dr. Olaide in Akure, Nigeria.\n\nToday: {{ $now.toFormat('cccc, d LLLL yyyy') }}\nweather: {{ $json.weather }}\nTop headlines:\n{{ $json.headlines.join('\\n') }}\n\nWrite:\n1. A warm one-line greeting.\n2. One sentence on the weather with practical advice (e.g. take an umbrella).\n3. The 5 headlines as a numbered list, each rewritten in plain English. Do not add facts that are not in the headline.\n4. One short motivational closing line.\n\nKeep it under 200 words. Plain text only, no markdown symbols.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1104,
+        -80
+      ],
+      "id": "4ed1fca1-42f4-479b-85f3-4549589b1da1",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        160
+      ],
+      "id": "e670db4d-388e-4b48-9505-7c2810450650",
+      "name": "Google Gemini Chat Model",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ICdfJkQmLb2a3BTN",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "olaideagbolade@gmail.com",
+        "toEmail": "olaideagbolade@gmail.com",
+        "subject": "=Morning Briefing – {{ $now.toFormat('ccc d LLL') }} – {{ $('HTTP Request').item.json.current.temperature_2m }}℃",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1456,
+        -80
+      ],
+      "id": "e73565f6-5fac-4e32-9720-15ff72c0a3b2",
+      "name": "Send an Email",
+      "webhookId": "d1cfd15b-72e7-4d6d-8ddf-06fc7427578f",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "smtp": {
+          "id": "HmZ3N9mytBVLDkff",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -16,
+        -224
+      ],
+      "id": "7759ed4e-515a-4947-8397-9c3b059e6e94",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "ZfibJ4JzMwuEtt3K"
+  },
+  "versionId": "47bf4775-bd43-4550-9b4d-22e9861fa794",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a2f929cb0956daa0366ab14ceb0071cc3f1e94350121b95cfc15a0ec69575c28"
+  },
+  "nodeGroups": [],
+  "id": "V34UaPGwciICaSmz",
+  "tags": []
+}
