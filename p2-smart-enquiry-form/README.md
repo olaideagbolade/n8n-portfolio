@@ -8,4 +8,4 @@ A contact form that uses AI to qualify every enquiry.
 - Customers receive an AI-written auto-reply with strict guardrails (no invented prices or promises)
 - Retry on fail and a linked error-alert workflow
 
-![P2 workflow](P2-Smart Enquiry Canvas.png)
+![P2 workflow](P2-Canvas.png)
