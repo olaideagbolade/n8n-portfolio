@@ -1,0 +1,384 @@
+{
+  "name": "P6 – Telegram AI Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        240
+      ],
+      "id": "73626dc0-9d10-4ebe-b518-4f95d7cc00b2",
+      "name": "Telegram Trigger",
+      "webhookId": "2c6ca9e1-90da-4290-bea8-2201c1886a95",
+      "credentials": {
+        "telegramApi": {
+          "id": "13EqUIrAXnwxAMP9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Today is {{ $now.setZone('Africa/Lagos').toFormat('cccc d LLLL yyyy, HH:mm') }} (Africa/Lagos time, UTC+1).\nYou are the friendly Telegram assistant for Akure Solar Solutions, a solar installation company in Akure, Nigeria.\n\nSTYLE\n- Short, conversational replies for a chat app: 1 to 4 short sentences.\n- Plain text, no markdown symbols. Greet people by first name if they tell you it.\n\nPRODUCTS AND PRICES\n- For ANY question about packages, prices, availability or which system someone needs, ALWAYS use the Get Solar Products tool first. Never answer from memory.\n- Quote prices exactly as in the tool, written as NGN with commas (e.g. NGN 3,400,000).\n- If \"In Stock\" is No, say it is currently unavailable and share the note (e.g. restock date).\n- To recommend a package, match the customer's needs to the Notes column. If unsure, ask what appliances they want to power.\n- Before recommending a package, if the customer mentions any heavy appliance (pumping machine, air conditioner, freezer, welding machine, electric cooker, motors), ASK for its rating in HP or watts if they haven't given it.\n- Compare the rating against the \"Max Pump / Heavy Load\" column. Only recommend a package whose limit covers the load.\n- If the load is larger than any package's limit, or the customer doesn't know the rating, do NOT recommend a package. Explain that motors draw a high starting current and need a proper assessment, and offer a free site survey.\n- Always say your recommendation is preliminary and the final system size is confirmed during the site survey.\n- If something is not in the tool results (e.g. a 7.5kVA system), say you don't have that information and give the phone number 0803 000 1234.\n\nBOUNDARIES\n- Never invent prices, discounts, dates or promises.\n- Politely steer unrelated questions back to solar.\nSITE SURVEY BOOKINGS\n- Site surveys are free and last 1 hour. Available start times: Monday to Friday 9am to 4pm, Saturday 9am to 12pm. No Sundays. Never book in the past.\n- Surveys are only available in Ondo and Ekiti States.\n- To book, collect: full name, phone number, full address, and preferred date and time. Ask for anything missing, one or two items at a time.\n- Use Check Availability first. If the slot is taken, suggest another time.\n- Before booking, read back all the details and ask \"Shall I book this for you?\" Only use Book Site Survey after a clear yes.\n- After booking, confirm the date and time and say a team member will call the day before to confirm.\n- You MUST call Check Availability for the exact slot immediately before every booking. Never book without a fresh check."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "59421662-496d-4d00-ba68-164f3bead628",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        456,
+        216
+      ],
+      "id": "64ac2adf-b91c-4046-9820-5043843ec4d9",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        592,
+        240
+      ],
+      "id": "6b15ea70-0dbb-4d78-ba64-cbf8332b586b",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        96
+      ],
+      "id": "8322aacf-5ab1-409e-a81c-1c2fce77a538",
+      "name": "Send a text message",
+      "webhookId": "01aed33e-6b09-4c3d-a642-2fa3211df1f9",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "13EqUIrAXnwxAMP9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Returns all solar packages offered by Akure Solar Solutions, with capacity, price in NGN, stock availability (Yes/No) and notes on what each package powers. Use it for ANY question about packages, prices, availability or recommendations.",
+        "documentId": {
+          "__rl": true,
+          "value": "1lfkHqU2hJciw80xfdCm9WfzO_PwqZjLT3zwByJs3mxk",
+          "mode": "list",
+          "cachedResultName": "Solar Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lfkHqU2hJciw80xfdCm9WfzO_PwqZjLT3zwByJs3mxk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lfkHqU2hJciw80xfdCm9WfzO_PwqZjLT3zwByJs3mxk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        208
+      ],
+      "id": "f699a677-a14c-4208-82ff-7103edc0671d",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "x78PTYioO8sPhJX5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Returns any surveys already booked between start_time and end_time. If ANY event is returned, the slot is TAKEN, so offer another time. If nothing is returned, the slot is free.",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "379160d8441d92b53382e8c58094b122611df4011234e2a40beddfcf974f7855@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Site Surveys"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $fromAI('start_time', 'Start of the slot in ISO 8601 with the Lagos offset +01:00, e.g. 2026-11-10T10:00:00+01:00', 'string') }}",
+        "timeMax": "={{ $fromAI('end_time', 'End of the slot, 1 hour after start_time, ISO 8601 with +01:00', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        224
+      ],
+      "id": "02b77319-a77d-4985-9e28-985ddd0d7212",
+      "name": "Check Availability",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "QFmfl6guRav3CxjX",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Books a 1-hour free site survey in the Site Surveys calendar. Only use AFTER checking availability AND after the customer has clearly confirmed all details.",
+        "calendar": {
+          "__rl": true,
+          "value": "379160d8441d92b53382e8c58094b122611df4011234e2a40beddfcf974f7855@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Site Surveys"
+        },
+        "start": "={{ $fromAI('start_time', 'Start of the requested survey slot in ISO 8601 with Lagos offset, e.g. 2026-11-12T10:00:00+01:00', 'string') }}",
+        "end": "={{ $fromAI('end_time', 'End of the slot, exactly 1 hour after start_time, same format', 'string') }}",
+        "additionalFields": {
+          "description": "=Phone: {{ $fromAI('phone', 'Customer phone number', 'string') }} Needs: {{ $fromAI('needs', 'What the customer wants to power, if mentioned', 'string') }} Booked via Telegram (chat ID {{ $('Telegram Trigger').item.json.message.chat.id }})",
+          "summary": "=Site survey – {{ $fromAI('customer_name', 'Customer full name', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1024,
+        224
+      ],
+      "id": "7fd96484-58e4-4ecd-83e5-f25779830609",
+      "name": "Book Site Survey",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "QFmfl6guRav3CxjX",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Sorry, I can only read text messages for now. Please type your question 🙂",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        384
+      ],
+      "id": "97f840df-5c74-4db4-b1db-5dc8d89ed957",
+      "name": "Send a text message1",
+      "webhookId": "ea646294-c245-4ca3-a5a2-e94bf6771e41",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "telegramApi": {
+          "id": "13EqUIrAXnwxAMP9",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dfe7eca0-2543-45bd-a634-53d5b70ca1b3",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        240
+      ],
+      "id": "171f529a-68ac-470b-b2a5-96c2be3f53cc",
+      "name": "Is Text?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is Text?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Site Survey": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Text?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZfibJ4JzMwuEtt3K",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b2ca13fb-7b0f-459c-9e33-bc37e8b8cf18",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a2f929cb0956daa0366ab14ceb0071cc3f1e94350121b95cfc15a0ec69575c28"
+  },
+  "nodeGroups": [],
+  "id": "BqpsJP5SMvnEg2xT",
+  "tags": []
+}
