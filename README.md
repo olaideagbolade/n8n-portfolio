@@ -10,3 +10,4 @@ n8n workflows using AI (Google Gemini), APIs and Google Workspace.
 | 4 | [Invoice Extractor](p4-invoice-extractor) | AI extracts invoice data from PDFs into Google Sheets, with an error folder for unreadable files |
 | 5 | [Knowledge-Base Chatbot](p5-knowledge-base-chatbot) | RAG chatbot answering only from business documents, with tested guardrails |
 | 6 | [Telegram AI Assistant](p6-telegram-ai-assistant) | AI agent that answers from live product data and books appointments into Google Calendar |
+| 7 | [Lead Generation Pipeline](p7-lead-generation) | Finds, de-duplicates and AI-scores business leads with personalised, human-reviewed WhatsApp outreach |
