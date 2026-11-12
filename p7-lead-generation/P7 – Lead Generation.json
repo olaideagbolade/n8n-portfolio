@@ -1,0 +1,544 @@
+{
+  "name": "P7 – Lead Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Find Leads",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Business type",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "City",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Number of leads",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        384
+      ],
+      "id": "977484ee-0473-4c41-8aaf-f4341957b6cf",
+      "name": "On form submission",
+      "webhookId": "2909c370-a852-4009-817e-4a18779f0eab"
+    },
+    {
+      "parameters": {
+        "operation": "clearDeduplicationHistory",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        448,
+        384
+      ],
+      "id": "76f72897-c373-4b4f-afd0-e3843b1314ec",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        384
+      ],
+      "id": "7dd3ecde-fe37-4c2d-b22c-18093903bc06",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        904,
+        216
+      ],
+      "id": "b837df6e-30b4-428b-af5d-cda464903b99",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"score\": {\n\t\t\t\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10\n\t\t},\n\t\t\"reason\": {\"type\": \"string\"},\n\t\t\t\"opening_line\": {\"array\": \"string\"}\n    },\n\"required\": [\"score\", \"reason\", \"opening_line\"]\t\t\t\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1032,
+        216
+      ],
+      "id": "671a4e69-e202-483d-a8c3-99cc3de2b2e7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        304
+      ],
+      "id": "c20d5fee-ec57-4b18-9f50-4a28b7d6b2b3",
+      "name": "Wait",
+      "webhookId": "47d3ed79-16a5-4501-bb23-755aea9c5960"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"searchStringsArray\": [\"{{ $json['Business type'] }}\"],\n  \"locationQuery\": \"{{ $json['City'] }}, Nigeria\",\n  \"maxCrawledPlacesPerSearch\": {{ Math.min($json['Number of leads'], 20) }},\n  \"language\": \"en\"\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        384
+      ],
+      "id": "51441aab-cf66-4769-b7e9-537eadf57f1a",
+      "name": "Search Google Maps",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "zY7SQTjz7LA61w0r",
+          "name": "Apify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You qualify sales leads for this service:\n\"AI automation for small businesses: chatbots that answer customer enquiries on WhatsApp, Telegram or a website, plus automated enquiry handling and booking.\"\n\nBusiness:\n- Name: {{ $json.title }}\n- Category: {{ $json.categoryName }}\n- Address: {{ $json.address }}\n- Phone: {{ $json.phone || 'none listed' }}\n- Website: {{ $json.website || 'none listed' }}\n- Google rating: {{ $json.totalScore || 'none' }} from {{ $json.reviewsCount || 0 }} reviews\n\nScore this lead from 1 (poor fit) to 10 (excellent fit) using these signals:\n- Reachable: a phone number is listed (essential; without one, score 3 or lower)\n- Busy: many reviews means many customer enquiries, so more value from automation\n- Room to improve: no website or a basic online presence means a stronger need for digital help\n- Customer-facing: businesses that take bookings or answer lots of questions benefit most\n- Data quality: if the name and category don't match, or the listing looks like spam/keyword-stuffed, score 4 or lower and say so in the reason.\n- Fewer than 5 reviews: maximum score 6.\nCalculate the score with these points (start at 5):\n+2 if 50 or more reviews; +1 if 10–49 reviews; −1 if fewer than 5 reviews\n+1 if no website, or only a WhatsApp link / free site (e.g. Google Sites, GitHub Pages)\n+1 if the business clearly takes bookings or site visits (e.g. installers, clinics, salons)\n−3 if no phone number\n−3 if the name and category don't match or the listing looks spammy\nKeep the final score between 1 and 10, and show the calculation briefly in the reason.\n\nThen write a personalised opening line for a first message FROM a freelance automation specialist TO this business:\n- Address the business by name (e.g. \"Hi BRIWECO team,\"). Never write \"Hello from <business>\".\n- Structure: greeting → ONE real detail from the data → one short sentence on the benefit → a soft question.\n-Use ONE detail only; don't combine the address with the reviews\n- Benefit to mention: replying to customer enquiries instantly, even after hours, so they don't lose jobs to competitors.\n- Under 40 words, warm and professional, at most one exclamation mark.\n- Vary the wording; do not start with \"Congratulations\".\n- Never invent facts, compliments or claims not supported by the data.\n\nExample of the right style (do not copy it word for word):\n\"Hi BRIWECO team, 15 reviews averaging 4.9 means customers trust you, and probably message you a lot. Would instant WhatsApp replies, even after hours, help you catch more of those enquiries?\"\n- \"Hi BRIWECO team, 15 reviews averaging 4.9 says customers trust you. How do you currently keep up with WhatsApp enquiries when you're out on installations?\"\n- \"Hello Novel Solar, with 93 reviews you must get a lot of questions about pricing. Would it help if those got an instant, accurate reply, even at night?\"\n- \"Hi LIMED TECH team, I help solar companies in Ibadan reply to customer enquiries instantly so fewer jobs slip away. Is that something you'd find useful?\"\nUse a different question each time.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "1c09c603-a98c-4d20-a86b-d4fed33a3475",
+      "name": "Score Lead",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1BMPWd3XkDuB2JOFKWGFS3tKLgau3h5r7ig30t5UYOQc",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BMPWd3XkDuB2JOFKWGFS3tKLgau3h5r7ig30t5UYOQc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BMPWd3XkDuB2JOFKWGFS3tKLgau3h5r7ig30t5UYOQc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date Added": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Business": "={{ $('Loop Over Items').item.json.title }}",
+            "Category": "={{ $('Loop Over Items').item.json.categoryName }}",
+            "Phone": "={{ $('Loop Over Items').item.json.phone }}",
+            "Website": "={{ $('Loop Over Items').item.json.website }}",
+            "Address": "={{ $('Loop Over Items').item.json.address }}",
+            "Rating": "={{ $('Loop Over Items').item.json.totalScore }}",
+            "Reviews": "={{ $('Loop Over Items').item.json.reviewsCount }}",
+            "Maps Link": "={{ $('Loop Over Items').item.json.url }}",
+            "Lead Score": "={{ $json.output.score }}",
+            "Reason": "={{ $json.output.reason }}",
+            "Opening Line": "={{ $json.output.opening_line }}",
+            "Status": "New",
+            "WhatsApp Link": "={{ $('Loop Over Items').item.json.phone ? 'https://wa.me/' + $('Loop Over Items').item.json.phone.replace(/\\D/g, '').replace(/^0/, '234') + '?text=' + encodeURIComponent($json.output.opening_line + '\\n\\n– Olaide | AI automation for Nigerian businesses') : '' }}\n"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Business",
+              "displayName": "Business",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rating",
+              "displayName": "Rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reviews",
+              "displayName": "Reviews",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Maps Link",
+              "displayName": "Maps Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Opening Line",
+              "displayName": "Opening Line",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WhatsApp Link",
+              "displayName": "WhatsApp Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        96
+      ],
+      "id": "17cfeb73-647a-4c0c-91f2-f2044f351ddc",
+      "name": "Google Sheets",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "x78PTYioO8sPhJX5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "leads",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        960,
+        384
+      ],
+      "id": "4e9b16a2-8096-4e5c-9a8a-7c56a287fd4f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "fromEmail": "olaideagbolade@gmail.com",
+        "toEmail": "olaideagbolade@gmail.com",
+        "subject": "=🎯 {{ $json.leads.length }} new leads: {{ $('On form submission').first().json['Business type'] }} in {{ $('On form submission').first().json['City'] }}",
+        "emailFormat": "text",
+        "text": "=Your lead search has finished.\n\nNew leads added: {{ $json.leads.length }}\n\nTop 3 by score:\n{{ $json.leads.sort((a, b) => b['Lead Score'] - a['Lead Score']).slice(0, 3).map(l => '• ' + l.Business + ' (score ' + l['Lead Score'] + ') – ' + l.Phone).join('\\n') }}\n\nOpen the Leads sheet to review and send messages.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1184,
+        384
+      ],
+      "id": "3c1c1905-d139-4905-968f-29268b4850c7",
+      "name": "Send an Email",
+      "webhookId": "0cf5fc09-a0c6-4bf5-b4b7-e9855d6cfcda",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "smtp": {
+          "id": "HmZ3N9mytBVLDkff",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Search Google Maps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Google Maps": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZfibJ4JzMwuEtt3K",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "df44b728-a581-4c00-bc06-cdd4f8b3a96a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a2f929cb0956daa0366ab14ceb0071cc3f1e94350121b95cfc15a0ec69575c28"
+  },
+  "nodeGroups": [],
+  "id": "9l0AXlAncUQYNwjo",
+  "tags": []
+}
