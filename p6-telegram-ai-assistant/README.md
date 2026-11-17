@@ -1,5 +1,6 @@
 # Telegram AI Sales & Booking Assistant (n8n + Gemini)
 
+▶️ **[Watch the 2-minute demo](https://www.loom.com/share/3ba9ed390d4b45939b23ba97d77ca4d0)**
 A Telegram bot for a solar company that answers product questions from live data and books site surveys into Google Calendar.
 
 ## What it does
