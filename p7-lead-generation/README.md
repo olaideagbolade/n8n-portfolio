@@ -1,5 +1,7 @@
 # AI Lead Generation & Outreach Pipeline (n8n + Gemini + Google Maps)
 
+▶️ **[Watch the 2-minute demo](https://www.loom.com/share/ddb973f3fdcb47b896f0b6b4f179f36f)**
+
 Turns "solar installers in a location" into a scored, ready-to-contact lead list in minutes.
 
 ## What it does
