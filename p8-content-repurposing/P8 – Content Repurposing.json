@@ -1,0 +1,692 @@
+{
+  "name": "P8 – Content Repurposing",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Repurpose a Video",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "YouTube URL",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Brand or Author Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Audience",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tone",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Professional"
+                  },
+                  {
+                    "option": "Friendly"
+                  },
+                  {
+                    "option": "Inspirational"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4517dace-7bff-4e39-9d1a-55976116f2d5",
+      "name": "On form submission",
+      "webhookId": "c258792e-6c2b-4e4e-86f1-ffe0e0375fda"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "text": "Watch this video carefully and produce detailed notes for a content writer:\n\n1. SUMMARY: 5–7 sentences covering the main message.\n2. KEY POINTS: 5–8 bullet points, each one specific idea or lesson from the video.\n3. QUOTES: 3 short, memorable lines the speaker actually says, with approximate timestamps.\n4. EXAMPLES: any stories, numbers or examples the speaker uses.\n\nOnly include what is actually said or shown in the video. Do not add outside facts or opinions.s in this video?",
+        "videoUrls": "={{ $json['YouTube URL'] }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "df959668-0eed-4a1e-9dd7-7bbb24fde77e",
+      "name": "Watch Video",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a blog post based ONLY on these notes from a video.\n\n{{ $('Brand Voice').item.json.voice }}\n\nNotes:\n{{ $('Brand Voice').item.json.notes }}\n\nRequirements:\n- Catchy title, short introduction, 3–5 sections with subheadings, and a conclusion with a call to action\n- 600–900 words, formatted in Markdown (# title, ## subheadings)",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        0
+      ],
+      "id": "a8d4097a-e107-4ebc-b956-3ce51930fc4c",
+      "name": "Write Blog Post",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        968,
+        232
+      ],
+      "id": "64ad0d91-2372-4626-a07c-eedc12534f5a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8f162af9-d152-4331-ac8d-f8ad68375c72",
+              "name": "notes",
+              "value": "={{ $json.content.parts[0].text }}\nWatch this video carefully and produce detailed notes for a content writer:\n\n1. SUMMARY: 5–7 sentences covering the main message.\n2. KEY POINTS: 5–8 bullet points.\n3. QUOTES: up to 3 short lines the speaker clearly says, with approximate timestamps. Only include quotes you are confident about.\n4. NUMBERS AND FACTS: list every number or specification, and for each one state its source:\n   - [SPOKEN at mm:ss] if someone says it\n   - [ON SCREEN at mm:ss] if it appears as text or on a product in the video\n   - [DESCRIPTION] if it comes from the video description, product tags or links\n   Do NOT include prices from product links or shopping tags.\n\nStrict rules:\n- Only include what is actually said or shown in the video.\n- Never convert currencies, estimate prices or add typical specifications from general knowledge.",
+              "type": "string"
+            },
+            {
+              "id": "c7e5a6dd-1688-4aa7-b737-1ea8c0a695b0",
+              "name": "voice",
+              "value": "=Writing style for {{ $('On form submission').first().json['Brand or author name'] }}: - Audience: {{ $('On form submission').first().json['Target audience'] }} - Tone: {{ $('On form submission').first().json['Tone'] }} - Clear, simple English with short sentences; explain any technical term - Practical and specific: use the examples, numbers and quotes from the notes - Never invent facts, statistics, quotes or personal stories - Avoid hype words such as \"revolutionary\", \"game-changer\", \"unlock\" or \"skyrocket\"\n- Only use numbers and prices that appear in the notes' NUMBERS AND FACTS section, exactly as written.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "243c4350-3885-4f41-bab4-c4c2a1902dfb",
+      "name": "Brand Voice"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a LinkedIn post based ONLY on these notes from a video.\n\n{{ $('Brand Voice').item.json.voice }}\n\nNotes:\n{{ $('Brand Voice').item.json.notes }}\n\nLinkedIn rules:\n- First line is a strong hook that makes people click \"see more\" (under 12 words)\n- 150–250 words, short paragraphs of 1–2 sentences, with blank lines between them\n- Include 3 key takeaways as a simple list using \"→\" at the start of each line\n- End with a question that invites comments\n- Add 3–5 relevant hashtags on the last line\n- Plain text only: no Markdown symbols like # or **, because LinkedIn shows them literally",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "2b7addc2-ea8b-451f-96f4-2b43a02ccfb4",
+      "name": "Write LinkedIn Post",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        232
+      ],
+      "id": "10caedfe-40e0-4cd1-8f49-f2e2bb91540f",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write 3 posts for X (Twitter) based ONLY on these notes from a video.\n\n{{ $('Brand Voice').item.json.voice }}\n\nNotes:\n{{ $('Brand Voice').item.json.notes }}\n\nRules:\n- Each post must stand alone and cover a DIFFERENT idea from the notes\n- Under 270 characters each (including hashtags)\n- Use at most 1 hashtag per post; no emojis unless they add meaning\n- Make the first words grab attention",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "794ffd96-29de-47ea-87af-9c3b9026f00a",
+      "name": "Write X Posts",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"posts\": [\n    \"First post text goes here\",\n    \"Second post text goes here\",\n    \"Third post text goes here\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1736,
+        232
+      ],
+      "id": "dff720b5-545a-428a-9edf-2a32809cdc00",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1608,
+        232
+      ],
+      "id": "5d10cffe-78d1-46b0-a5bd-77e75b47d1bb",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dS5xMzHeFJjXT6Yc",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1zn-O2BLrBRif2-F_9XgOLPnSUbkp0Qd9",
+        "title": "={{ $('On form submission').first().json['Brand or author name'] }} – Content Pack – {{ $now.toFormat('dd LLL yyyy') }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        0
+      ],
+      "id": "944943d7-da7b-45df-9f06-aa206804cebf",
+      "name": "Create a document",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "H3ff3wzpWEqgGyWg",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=CONTENT PACK Source video: {{ $('On form submission').first().json['YouTube URL'] }}  ============================== BLOG POST ============================== {{ $('Write Blog Post').item.json.text }}  ============================== LINKEDIN POST ============================== {{ $('Write LinkedIn Post').item.json.text }}  ============================== X / TWITTER POSTS ============================== {{ $('Write X Posts').item.json.output.posts.map((p, i) => (i + 1) + '. ' + p).join('\\n\\n') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2176,
+        0
+      ],
+      "id": "ce402dfe-71ae-4918-8e7d-6b919cabf2b8",
+      "name": "Update a document",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "H3ff3wzpWEqgGyWg",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "olaideagbolade@gmail.com",
+        "subject": "=✅ Approve content pack: {{ $('On form submission').item.json['Brand or Author Name'] }}",
+        "message": "=A new content pack is ready for review.\n\nSource video: {{ $('On form submission').first().json['YouTube URL'] }}\n\nReview the blog post, LinkedIn post and X posts here:\nhttps://docs.google.com/document/d/{{ $('Create a document').item.json.id }}/edit\n\nPlease check facts, numbers and quotes against the video before approving.",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "Needs changes"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 2,
+              "resumeUnit": "days"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "54623767-87f8-4b98-9f38-3a4fcc53db7a",
+      "name": "Request Approval",
+      "webhookId": "e27a5acd-5da8-481f-9972-6b37ec273125",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OSYYC8XEA3sHOpZP",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9e602916-5c5b-4527-8aae-58a07a9dd0bd",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2624,
+        0
+      ],
+      "id": "0e947190-df5e-4103-b2a3-66d840d32b24",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Create a document').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1MhuuAYIG9_3w4XGHQ9BFGs6W5Gg_nQGG",
+          "mode": "list",
+          "cachedResultName": "Content Approved",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1MhuuAYIG9_3w4XGHQ9BFGs6W5Gg_nQGG"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2848,
+        -96
+      ],
+      "id": "8fd85c53-d899-4f90-9bf2-606f8038eb30",
+      "name": "Move file",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6QRRARUbSfFM6p7T",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Create a document').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1gvBL-CKadFT6UIdThrc7CNWHarCAK3CC",
+          "mode": "list",
+          "cachedResultName": "Content Needs Revision",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1gvBL-CKadFT6UIdThrc7CNWHarCAK3CC"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2848,
+        96
+      ],
+      "id": "e9a9ef2c-05c2-404b-a0d8-94105f8a5ce0",
+      "name": "Move file1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6QRRARUbSfFM6p7T",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "olaideagbolade@gmail.com",
+        "subject": "=Content pack moved to Needs Revision: {{ $('On form submission').item.json['Brand or Author Name'] }}",
+        "message": "There is a new content that requires immediate attention",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3072,
+        96
+      ],
+      "id": "42d764c4-5c32-4c50-aed7-b252863a113f",
+      "name": "Send a message",
+      "webhookId": "6d7fdd34-94b6-4b9e-87a3-442e15ef19b0",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OSYYC8XEA3sHOpZP",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "abdef9a1-5663-44ed-ab6e-6667c269b091",
+      "name": "Wait",
+      "webhookId": "fbfe94f3-7f01-4239-bbfc-176d99ca775d"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Watch Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watch Video": {
+      "main": [
+        [
+          {
+            "node": "Brand Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Blog Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Voice": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Blog Post": {
+      "main": [
+        [
+          {
+            "node": "Write LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write LinkedIn Post",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Write X Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write X Posts",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write X Posts",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write X Posts": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Request Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Approval": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Write Blog Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "ZfibJ4JzMwuEtt3K",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "90b6467b-1906-4cf7-989d-dbc73995b3f1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a2f929cb0956daa0366ab14ceb0071cc3f1e94350121b95cfc15a0ec69575c28"
+  },
+  "nodeGroups": [],
+  "id": "8GEUYWePVI9NzLuj",
+  "tags": []
+}
