@@ -1,5 +1,5 @@
 # AI Invoice & Receipt Extractor (n8n + Gemini + Google Drive + Sheets)
-
+▶️ **[Watch the 2-minute demo](https://www.loom.com/share/bfcfbc5e008840b0bc75188a9b72a699)**
 Drop a PDF invoice into a Google Drive folder — AI extracts the key data into a spreadsheet and files the document automatically.
 
 ## What it does
