@@ -7,7 +7,7 @@ n8n workflows using AI (Google Gemini), APIs and Google Workspace.
 | 1 | [Morning Briefing](p1-morning-briefing) | Daily AI-written weather + news email, with retries and error alerts |
 | 2 | [Smart Enquiry Form](p2-smart-enquiry-form) | AI qualifies enquiries, logs them to Google Sheets, alerts on sales leads, auto-replies to customers |
 | 3 | [AI Inbox Assistant](p3-ai-inbox-assistant) | Labels every email with AI and drafts replies in-thread for review |
-| 4 | [Invoice Extractor](p4-invoice-extractor) | AI extracts invoice data from PDFs into Google Sheets, with an error folder for unreadable files |
+| 4 | [Invoice Extractor](p4-invoice-extractor) | AI extracts invoice data from PDFs into Google Sheets, with an error folder for unreadable files [▶️ Demo](https://www.loom.com/share/bfcfbc5e008840b0bc75188a9b72a699) |
 | 5 | [Knowledge-Base Chatbot](p5-knowledge-base-chatbot) | RAG chatbot answering only from business documents, with tested guardrails |
 | 6 | [Telegram AI Assistant](p6-telegram-ai-assistant) | AI agent that answers from live product data and books appointments into Google Calendar · [▶️ Demo](https://www.loom.com/share/3ba9ed390d4b45939b23ba97d77ca4d0) |
 | 7 | [Lead Generation Pipeline](p7-lead-generation) | Finds, de-duplicates and AI-scores business leads with personalised, human-reviewed WhatsApp outreach · [▶️ Demo](https://www.loom.com/share/ddb973f3fdcb47b896f0b6b4f179f36f)|
